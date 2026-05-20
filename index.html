@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>카드등록 없는 일정관리 달력</title>
+    
+    <!-- FullCalendar 핵심 CSS 및 JS -->
+    <link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.js"></script>
+    
+    <!-- CSV 파일을 자바스크립트 객체로 변환해주는 PapaParse 라이브러리 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+    
+    <style>
+        body {
+            margin: 40px 10px;
+            font-family: 'Malgun Gothic', sans-serif;
+            font-size: 14px;
+            background-color: #f8f9fa;
+        }
+        #loading {
+            text-align: center;
+            font-size: 18px;
+            color: #666;
+            margin-top: 20px;
+        }
+        #calendar {
+            max-width: 1100px;
+            margin: 0 auto;
+            background: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        .fc-event {
+            cursor: pointer;
+            padding: 2px 4px;
+            background-color: #28a745; /* 초록색 달력 테마 */
+            border: none;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="loading">구글 시트에서 데이터를 읽어오는 중...</div>
+    <div id="calendar" style="display: none;"></div>
+
+    <script>
+        // ------------------ [ 설정 구역 ] ------------------
+        // 구글 시트에서 [파일]-[공유]-[웹에 게시]-[CSV]로 선택하고 생성된 주소를 입력하세요.
+        const SPREADSHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQocsx7-SzulKQKxNkET4oOszVyAMNmOd1csc8dgiQLuLK8aTWDtUdhXVkGOJSRKb_k1hXlNdqthP4p/pub?output=csv'; 
+        // --------------------------------------------------
+
+        document.addEventListener('DOMContentLoaded', function() {
+            if(SPREADSHEET_CSV_URL.includes('여기에')) {
+                document.getElementById('loading').innerText = '오류: 구글 시트 CSV 주소를 코드에 입력해주세요!';
+                return;
+            }
+            fetchCSVAndRenderCalendar();
+        });
+
+        function fetchCSVAndRenderCalendar() {
+            // 구글 웹 게시 CSV URL로부터 데이터를 원격으로 가져옴
+            Papa.parse(SPREADSHEET_CSV_URL, {
+                download: true,
+                header: true, // 첫 행을 title, start, end 같은 필드명으로 인식
+                skipEmptyLines: true,
+                complete: function(results) {
+                    const data = results.data;
+                    
+                    // FullCalendar가 읽을 수 있는 데이터 구조로 정제
+                    const events = data.map(item => {
+                        return {
+                            title: item.title ? item.title.trim() : '제목 없음',
+                            start: item.start ? item.start.trim() : null,
+                            end: item.end ? item.end.trim() : null
+                        };
+                    }).filter(event => event.start); // 시작일이 없는 껍데기 데이터는 제외
+
+                    // 화면 전환
+                    document.getElementById('loading').style.display = 'none';
+                    document.getElementById('calendar').style.display = 'block';
+
+                    // 달력 그리기
+                    initCalendar(events);
+                },
+                error: function(err) {
+                    console.error(err);
+                    document.getElementById('loading').innerText = '시트 데이터를 불러오지 못했습니다. 웹에 게시 설정을 다시 확인하세요.';
+                }
+            });
+        }
+
+        function initCalendar(eventsData) {
+            const calendarEl = document.getElementById('calendar');
+            const calendar = new FullCalendar.Calendar(calendarEl, {
+                initialView: 'dayGridMonth',
+                locale: 'ko',
+                headerToolbar: {
+                    left: 'prev,next today',
+                    center: 'title',
+                    right: 'dayGridMonth,listWeek'
+                },
+                buttonText: {
+                    today: '오늘',
+                    month: '월',
+                    list: '목록'
+                },
+                events: eventsData,
+                eventClick: function(info) {
+                    alert('일정: ' + info.event.title + '\n날짜: ' + info.event.startStr);
+                }
+            });
+            calendar.render();
+        }
+    </script>
+</body>
+</html>
