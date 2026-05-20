@@ -3,20 +3,24 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>모바일/카톡 최적화 달력</title>
+    <title>일찡 달력</title>
     
+    <!-- FullCalendar 핵심 CSS 및 JS -->
     <link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.js"></script>
     
+    <!-- CSV 라이브러리 (PapaParse) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+    
     <style>
-        /* 카톡 창 내부에서 여백 때문에 잘리지 않도록 전체 여백 최소화 */
+        /* 카톡 내부 여백 때문에 화면이 깨지지 않도록 전체 여백 최소화 */
         html, body {
             margin: 0;
             padding: 0;
             height: 100%;
             font-family: 'Malgun Gothic', sans-serif;
             background-color: #f8f9fa;
-            overflow: hidden; /* 전체 화면 스크롤 방지 */
+            overflow: hidden; /* 바깥 전체 스크롤 방지 */
         }
         #loading {
             text-align: center;
@@ -24,15 +28,15 @@
             color: #666;
             padding-top: 50px;
         }
-        /* 카톡 창 높이에 맞춰 꽉 차게 조절 */
+        /* 카톡 화면 높이에 맞춰 달력이 꽉 차도록 조절 */
         #calendar {
             max-width: 100%;
-            height: 100vh; /* 화면 높이 전체 사용 */
+            height: 100vh; /* 화면 높이 100% 사용 */
             padding: 10px;
             box-sizing: border-box;
             background: #fff;
         }
-        /* 모바일 화면에서 글자가 너무 크면 잘리므로 폰트 조절 */
+        /* 좁은 모바일 화면 맞춤 폰트 및 버튼 크기 조절 */
         .fc {
             font-size: 12px !important;
         }
@@ -43,38 +47,59 @@
             padding: 4px 8px !important;
             font-size: 12px !important;
         }
+        .fc-event {
+            cursor: pointer;
+            padding: 2px 4px;
+            background-color: #28a745; /* 질문자님이 쓰시던 초록색 테마 유지 */
+            border: none;
+        }
     </style>
 </head>
 <body>
 
-    <div id="loading">일정을 읽어오는 중...</div>
+    <div id="loading">구글 시트에서 데이터를 읽어오는 중...</div>
     <div id="calendar" style="display: none;"></div>
 
     <script>
-        // [기존 설정 유지]
-        const API_KEY = 'YOUR_GOOGLE_API_KEY'; 
-        const SHEET_ID = 'YOUR_SPREADSHEET_ID'; 
-        const RANGE = 'Sheet1!A2:C100'; 
+        // ------------------ [ 설정 구역 ] ------------------
+        // 구글 시트에서 [파일]-[공유]-[웹에 게시]-[CSV] 주소를 여기에 넣어주세요.
+        const SPREADSHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQocsx7-SzulKQKxNkET4oOszVyAMNmOd1csc8dgiQLuLK8aTWDtUdhXVkGOJSRKb_k1hXlNdqthP4p/pub?output=csv'; 
+        // --------------------------------------------------
 
         document.addEventListener('DOMContentLoaded', function() {
-            fetchRealtimeData();
+            if(SPREADSHEET_CSV_URL.includes('여기에')) {
+                document.getElementById('loading').innerText = '오류: 구글 시트 CSV 주소를 코드에 입력해주세요!';
+                return;
+            }
+            fetchCSVAndRenderCalendar();
         });
 
-        function fetchRealtimeData() {
-            const SPREADSHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQocsx7-SzulKQKxNkET4oOszVyAMNmOd1csc8dgiQLuLK8aTWDtUdhXVkGOJSRKb_k1hXlNdqthP4p/pub?output=csv'; 
-            fetch(url)
-                .then(response => response.json())
-                .then(data => {
-                    if (!data.values) return;
-                    const events = data.values.map(row => {
-                        return { title: row[0], start: row[1], end: row[2] ? row[2] : null };
+        function fetchCSVAndRenderCalendar() {
+            Papa.parse(SPREADSHEET_CSV_URL, {
+                download: true,
+                header: true,
+                skipEmptyLines: true,
+                complete: function(results) {
+                    const data = results.data;
+                    
+                    const events = data.map(item => {
+                        return {
+                            title: item.title ? item.title.trim() : '제목 없음',
+                            start: item.start ? item.start.trim() : null,
+                            end: item.end ? item.end.trim() : null
+                        };
                     }).filter(event => event.start);
 
                     document.getElementById('loading').style.display = 'none';
                     document.getElementById('calendar').style.display = 'block';
+
                     initCalendar(events);
-                })
-                .catch(error => { console.error(error); });
+                },
+                error: function(err) {
+                    console.error(err);
+                    document.getElementById('loading').innerText = '시트 데이터를 불러오지 못했습니다. 웹에 게시 설정을 다시 확인하세요.';
+                }
+            });
         }
 
         function initCalendar(eventsData) {
@@ -82,19 +107,23 @@
             const calendar = new FullCalendar.Calendar(calendarEl, {
                 initialView: 'dayGridMonth',
                 locale: 'ko',
-                // 🔥 중요: 카톡 창 높이에 맞춰 달력 높이를 자동으로 맞추고 넘치면 스크롤바 생성
+                // 🔥 카톡 화면 높이에 맞춰 달력을 맞추고, 일정 많으면 내부 스크롤 생성
                 height: 'parent', 
                 contentHeight: 'auto',
                 aspectRatio: 1.35,
                 headerToolbar: {
                     left: 'prev,next today',
                     center: 'title',
-                    right: 'dayGridMonth,listWeek' // 모바일에선 주 단위보다 목록(list)이 보기 편함
+                    right: 'dayGridMonth,listWeek'
                 },
-                buttonText: { today: '오늘', month: '월', list: '목록' },
+                buttonText: {
+                    today: '오늘',
+                    month: '월',
+                    list: '목록'
+                },
                 events: eventsData,
                 eventClick: function(info) {
-                    alert('일정: ' + info.event.title);
+                    alert('일정: ' + info.event.title + '\n날짜: ' + info.event.startStr);
                 }
             });
             calendar.render();
