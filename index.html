@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>일찡 달력</title>
+    <title>스마트 일찡달력 v2</title>
     
     <!-- FullCalendar 핵심 CSS 및 JS -->
     <link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.css" rel="stylesheet">
@@ -12,58 +12,79 @@
     <!-- CSV 라이브러리 (PapaParse) -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
     
+    <!-- 예쁜 팝업창을 위한 SweetAlert2 라이브러리 -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    
     <style>
-        /* 카톡 내부 여백 때문에 화면이 깨지지 않도록 전체 여백 최소화 */
         html, body {
             margin: 0;
             padding: 0;
             height: 100%;
-            font-family: 'Malgun Gothic', sans-serif;
-            background-color: #f8f9fa;
-            overflow: hidden; /* 바깥 전체 스크롤 방지 */
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background-color: #f4f6f9;
+            overflow: hidden;
         }
         #loading {
             text-align: center;
             font-size: 16px;
-            color: #666;
-            padding-top: 50px;
+            color: #555;
+            padding-top: 60px;
+            font-weight: bold;
         }
-        /* 카톡 화면 높이에 맞춰 달력이 꽉 차도록 조절 */
         #calendar {
             max-width: 100%;
-            height: 100vh; /* 화면 높이 100% 사용 */
-            padding: 10px;
+            height: 100vh;
+            padding: 8px;
             box-sizing: border-box;
             background: #fff;
         }
-        /* 좁은 모바일 화면 맞춤 폰트 및 버튼 크기 조절 */
+        
+        /* 📱 모바일/카톡 가독성 개선 스타일링 */
         .fc {
             font-size: 12px !important;
         }
         .fc-toolbar-title {
-            font-size: 16px !important;
+            font-size: 15px !important;
+            font-weight: bold;
+            color: #333;
         }
         .fc-button {
-            padding: 4px 8px !important;
-            font-size: 12px !important;
+            padding: 5px 10px !important;
+            font-size: 11px !important;
+            font-weight: bold !important;
+            text-transform: uppercase;
         }
+        
+        /* 🎨 일정 바 스타일 고급화 */
         .fc-event {
             cursor: pointer;
-            padding: 2px 4px;
-            background-color: #28a745; /* 질문자님이 쓰시던 초록색 테마 유지 */
-            border: none;
+            padding: 3px 6px !important;
+            border-radius: 6px !important;
+            border: none !important;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.08);
+            transition: transform 0.1s ease;
         }
+        .fc-event:hover {
+            transform: scale(1.02);
+            filter: brightness(0.9);
+        }
+        
+        /* 일요일/토요일 색상 강조 */
+        .fc-day-sun a { color: #dc3545 !important; } /* 일요일 빨간색 */
+        .fc-day-sat a { color: #007bff !important; } /* 토요일 파란색 */
     </style>
 </head>
 <body>
 
-    <div id="loading">구글 시트에서 데이터를 읽어오는 중...</div>
+    <div id="loading">
+        <div style="margin-bottom: 10px;">⏳ 스마트 달력 로딩 중...</div>
+    </div>
     <div id="calendar" style="display: none;"></div>
 
     <script>
         // ------------------ [ 설정 구역 ] ------------------
         // 구글 시트에서 [파일]-[공유]-[웹에 게시]-[CSV] 주소를 여기에 넣어주세요.
-        const SPREADSHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQocsx7-SzulKQKxNkET4oOszVyAMNmOd1csc8dgiQLuLK8aTWDtUdhXVkGOJSRKb_k1hXlNdqthP4p/pub?output=csv'; 
+        const SPREADSHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQocsx7-SzulKQKxNkET4oOszVyAMNmOd1csc8dgiQLuLK8aTWDtUdhXVkGOJSRKb_k1hXlNdqthP4p/pub?output=csv';
         // --------------------------------------------------
 
         document.addEventListener('DOMContentLoaded', function() {
@@ -83,10 +104,15 @@
                     const data = results.data;
                     
                     const events = data.map(item => {
+                        // 사용자가 지정한 색상이 있으면 쓰고, 없으면 기본 초록색(#28a745) 적용
+                        const customColor = item.color && item.color.trim() ? item.color.trim() : '#28a745';
+                        
                         return {
                             title: item.title ? item.title.trim() : '제목 없음',
                             start: item.start ? item.start.trim() : null,
-                            end: item.end ? item.end.trim() : null
+                            end: item.end && item.end.trim() ? item.end.trim() : null,
+                            backgroundColor: customColor,
+                            borderColor: customColor
                         };
                     }).filter(event => event.start);
 
@@ -97,7 +123,7 @@
                 },
                 error: function(err) {
                     console.error(err);
-                    document.getElementById('loading').innerText = '시트 데이터를 불러오지 못했습니다. 웹에 게시 설정을 다시 확인하세요.';
+                    document.getElementById('loading').innerText = '시트 데이터를 불러오지 못했습니다. 링크를 확인하세요.';
                 }
             });
         }
@@ -107,10 +133,24 @@
             const calendar = new FullCalendar.Calendar(calendarEl, {
                 initialView: 'dayGridMonth',
                 locale: 'ko',
-                // 🔥 카톡 화면 높이에 맞춰 달력을 맞추고, 일정 많으면 내부 스크롤 생성
                 height: 'parent', 
                 contentHeight: 'auto',
                 aspectRatio: 1.35,
+                
+                // 🇰🇷 대한민국 공휴일 자동 연동 기능 탑재
+                googleCalendarApiKey: '', // 개인 구글 API가 없다면 빈칸 유지 가능 (기본 설정)
+                eventSources: [
+                    {
+                        events: eventsData // 구글 시트에서 가져온 데이터 소스
+                    },
+                    {
+                        // 오픈소스 한국 공휴일 캘린더 피드 주입
+                        url: 'https://raw.githubusercontent.com/yecl/korean-holidays-json/main/data/2026.json',
+                        textColor: '#dc3545',
+                        display: 'background' // 공휴일 배경을 은은하게 붉은색으로 칠함
+                    }
+                ],
+                
                 headerToolbar: {
                     left: 'prev,next today',
                     center: 'title',
@@ -121,9 +161,21 @@
                     month: '월',
                     list: '목록'
                 },
-                events: eventsData,
+                
+                // 🔔 투박한 기본 alert 경고창 대신 깔끔한 팝업창(SweetAlert2) 띄우기
                 eventClick: function(info) {
-                    alert('일정: ' + info.event.title + '\n날짜: ' + info.event.startStr);
+                    let dateText = info.event.startStr;
+                    if(info.event.endStr) {
+                        dateText += ` ~ ${info.event.endStr}`;
+                    }
+                    
+                    Swal.fire({
+                        title: info.event.title,
+                        html: `<b>📅 일정 일시:</b> ${dateText}`,
+                        icon: 'info',
+                        confirmButtonText: '확인',
+                        confirmButtonColor: info.event.backgroundColor || '#28a745'
+                    });
                 }
             });
             calendar.render();
