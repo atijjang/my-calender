@@ -1,121 +1,253 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>일정 달력2</title>
-    
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>제발 달력</title>
+
+    <!-- FullCalendar -->
     <link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.js"></script>
+
+    <!-- PapaParse -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+
+    <!-- SweetAlert -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    
+
     <style>
-        html, body { margin: 0; padding: 0; height: 100%; font-family: sans-serif; background-color: #f8f9fa; overflow: hidden; }
-        #loading { text-align: center; font-size: 16px; color: #666; padding-top: 50px; font-weight: bold; }
-        #calendar { max-width: 100%; height: 100vh; padding: 10px; box-sizing: border-box; background: #fff; }
-        .fc-event { cursor: pointer; padding: 3px 6px; background-color: #28a745; border: none; border-radius: 6px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
-        .fc-day-sun a { color: #dc3545 !important; }
-        .fc-day-sat a { color: #007bff !important; }
+        html, body {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            font-family: sans-serif;
+            background-color: #f8f9fa;
+            overflow: hidden;
+        }
+
+        #loading {
+            text-align: center;
+            font-size: 16px;
+            color: #666;
+            padding-top: 50px;
+            font-weight: bold;
+        }
+
+        #calendar {
+            max-width: 100%;
+            height: 100vh;
+            padding: 10px;
+            box-sizing: border-box;
+            background: #fff;
+        }
+
+        .fc-event {
+            cursor: pointer;
+            padding: 3px 6px;
+            background-color: #28a745;
+            border: none;
+            border-radius: 6px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+
+        .fc-day-sun a {
+            color: #dc3545 !important;
+        }
+
+        .fc-day-sat a {
+            color: #007bff !important;
+        }
     </style>
 </head>
 <body>
 
-    <div id="loading">구글 시트 달력에서 일정을 읽어오는 중...</div>
-    <div id="calendar" style="display: none;"></div>
+<div id="loading">구글 시트 달력에서 일정을 읽어오는 중...</div>
+<div id="calendar" style="display:none;"></div>
 
-    <script>
-        // ------------------ [ 마스터 설정 구역 ] ------------------
-        const SPREADSHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRwyj8tc_nfUA8HM5XRbFJKxuV_QAGgZwYJjF4N553FDdToB8yBDU76vE2xHRFG0glJV3rtZE3GhuVC/pub?gid=1133141414&single=true&output=csv';
-        const YEAR_MONTH = '2026-05'; 
-        // --------------------------------------------------------
+<script>
 
-        document.addEventListener('DOMContentLoaded', function() {
-            fetchGridCSV();
-        });
+    // ---------------- 설정 ----------------
+    const SPREADSHEET_CSV_URL =
+        'https://docs.google.com/spreadsheets/d/e/2PACX-1vRwyj8tc_nfUA8HM5XRbFJKxuV_QAGgZwYJjF4N553FDdToB8yBDU76vE2xHRFG0glJV3rtZE3GhuVC/pub?gid=1133141414&single=true&output=csv';
 
-        async function fetchGridCSV() {
-            try {
-                // 브라우저 확장 프로그램의 간섭을 우회하기 위해 다이렉트 fetch 통신 사용
-                const response = await fetch(SPREADSHEET_CSV_URL);
-                if (!response.ok) throw new Error('네트워크 응답 기능에 문제가 있습니다.');
-                
-                const csvText = await response.text();
-                
-                // 가져온 텍스트 데이터를 기반으로 달력 구조 해석 시작
-                Papa.parse(csvText, {
-                    header: false,
-                    complete: function(results) {
-                        parseCalendarData(results.data);
-                    }
-                });
-            } catch (err) {
-                console.error("데이터 로드 실패:", err);
-                document.getElementById('loading').innerText = '구글 시트 통신망이 차단되었습니다. 크롬 광고차단 앱을 끄거나 다른 브라우저로 확인해 보세요.';
-            }
-        }
+    const YEAR_MONTH = '2026-05';
+    // -------------------------------------
 
-        function parseCalendarData(rows) {
-            const events = [];
-            console.log("시트 원본 로드 성공:", rows);
 
-            // 1행(요일) 건너뛰고 2행(날짜행)부터 시작해서 2칸씩 점프
-            for (let r = 1; r < rows.length; r += 2) {
-                const dateRow = rows[r];       
-                const eventRow = rows[r + 1];  
-                
-                if (!dateRow) continue;
-                
-                for (let c = 0; c < 7; c++) {
-                    let dayNum = dateRow[c] ? dateRow[c].toString().trim() : '';
-                    dayNum = dayNum.replace(/[^0-9]/g, ''); 
-                    
-                    if (dayNum && eventRow && eventRow[c]) {
-                        const eventTitle = eventRow[c].toString().trim();
-                        
-                        if (eventTitle && eventTitle !== '""' && eventTitle !== 'null') {
-                            const dateString = `${YEAR_MONTH}-${dayNum.padStart(2, '0')}`;
-                            
-                            events.push({
-                                title: eventTitle,
-                                start: dateString,
-                                allDay: true
-                            });
-                        }
-                    }
-                }
+    document.addEventListener('DOMContentLoaded', function () {
+        fetchGridCSV();
+    });
+
+
+    // CSV 읽기
+    async function fetchGridCSV() {
+
+        try {
+
+            const response = await fetch(SPREADSHEET_CSV_URL);
+
+            if (!response.ok) {
+                throw new Error('CSV 불러오기 실패');
             }
 
-            console.log("최종 동기화될 일정 리스트:", events);
+            // 한글 깨짐 방지
+            const buffer = await response.arrayBuffer();
+            const decoder = new TextDecoder('utf-8');
+            const csvText = decoder.decode(buffer);
 
-            document.getElementById('loading').style.display = 'none';
-            document.getElementById('calendar').style.display = 'block';
-            
-            initCalendar(events);
-        }
+            console.log("===== CSV 원본 =====");
+            console.log(csvText);
 
-        function initCalendar(eventsData) {
-            const calendarEl = document.getElementById('calendar');
-            const calendar = new FullCalendar.Calendar(calendarEl, {
-                initialView: 'dayGridMonth',
-                initialDate: `${YEAR_MONTH}-01`,
-                locale: 'ko',
-                height: 'parent',
-                headerToolbar: { left: 'prev,next today', center: 'title', right: '' },
-                events: eventsData,
-                eventClick: function(info) {
-                    Swal.fire({
-                        title: '상세 일정',
-                        text: info.event.title,
-                        icon: 'info',
-                        confirmButtonText: '확인',
-                        confirmButtonColor: '#28a745'
-                    });
+            Papa.parse(csvText, {
+                header: false,
+                skipEmptyLines: true,
+
+                complete: function (results) {
+
+                    console.log("===== 파싱 결과 =====");
+                    console.log(results.data);
+
+                    parseCalendarData(results.data);
+                },
+
+                error: function (err) {
+
+                    console.error(err);
+
+                    document.getElementById('loading').innerText =
+                        'CSV 파싱 실패';
                 }
             });
-            
-            calendar.render();
+
+        } catch (err) {
+
+            console.error(err);
+
+            document.getElementById('loading').innerText =
+                '구글 시트 연결 실패';
         }
-    </script>
+    }
+
+
+
+    // 달력 데이터 해석
+    function parseCalendarData(rows) {
+
+        const events = [];
+
+        console.log("===== rows =====");
+        console.log(rows);
+
+        /*
+            현재 구글시트 구조 기준:
+
+            날짜 셀 아래줄에 일정이 있는 형태
+
+            예:
+            7  8  9
+               일정
+        */
+
+        for (let r = 0; r < rows.length - 1; r++) {
+
+            const currentRow = rows[r];
+            const nextRow = rows[r + 1];
+
+            if (!currentRow) continue;
+
+            for (let c = 0; c < currentRow.length; c++) {
+
+                let dayNum = currentRow[c];
+
+                if (!dayNum) continue;
+
+                dayNum = dayNum.toString().trim();
+
+                // 숫자만 추출
+                dayNum = dayNum.replace(/[^0-9]/g, '');
+
+                if (!dayNum) continue;
+
+                // 아래줄 일정
+                let eventTitle = '';
+
+                if (nextRow && nextRow[c]) {
+                    eventTitle = nextRow[c].toString().trim();
+                }
+
+                // 일정 없으면 skip
+                if (!eventTitle) continue;
+
+                // 이상한 값 제거
+                if (
+                    eventTitle === 'null' ||
+                    eventTitle === 'undefined' ||
+                    eventTitle === '""'
+                ) {
+                    continue;
+                }
+
+                const dateString =
+                    `${YEAR_MONTH}-${dayNum.padStart(2, '0')}`;
+
+                events.push({
+                    title: eventTitle,
+                    start: dateString,
+                    allDay: true
+                });
+            }
+        }
+
+        console.log("===== 최종 이벤트 =====");
+        console.log(events);
+
+        document.getElementById('loading').style.display = 'none';
+        document.getElementById('calendar').style.display = 'block';
+
+        initCalendar(events);
+    }
+
+
+
+    // 달력 생성
+    function initCalendar(eventsData) {
+
+        const calendarEl = document.getElementById('calendar');
+
+        const calendar = new FullCalendar.Calendar(calendarEl, {
+
+            initialView: 'dayGridMonth',
+
+            initialDate: `${YEAR_MONTH}-01`,
+
+            locale: 'ko',
+
+            height: 'parent',
+
+            headerToolbar: {
+                left: 'prev,next today',
+                center: 'title',
+                right: ''
+            },
+
+            events: eventsData,
+
+            eventClick: function(info) {
+
+                Swal.fire({
+                    title: '상세 일정',
+                    text: info.event.title,
+                    icon: 'info',
+                    confirmButtonText: '확인',
+                    confirmButtonColor: '#28a745'
+                });
+            }
+        });
+
+        calendar.render();
+    }
+
+</script>
+
 </body>
 </html>
