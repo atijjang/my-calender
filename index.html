@@ -2,8 +2,10 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-    <title>제발 달력</title>
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+
+    <title>가즈아달력</title>
 
     <!-- FullCalendar -->
     <link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.css" rel="stylesheet">
@@ -16,7 +18,9 @@
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
     <style>
-        html, body {
+
+        html,
+        body {
             margin: 0;
             padding: 0;
             height: 100%;
@@ -41,41 +45,63 @@
             background: #fff;
         }
 
+        /* 이벤트 스타일 */
         .fc-event {
             cursor: pointer;
             padding: 3px 6px;
-            background-color: #28a745;
-            border: none;
+            background-color: #28a745 !important;
+            border: none !important;
             border-radius: 6px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            color: white !important;
+            font-weight: bold;
+            font-size: 12px;
         }
 
+        .fc-event-title {
+            color: white !important;
+        }
+
+        .fc-daygrid-event {
+            white-space: normal !important;
+        }
+
+        /* 일요일 */
         .fc-day-sun a {
             color: #dc3545 !important;
         }
 
+        /* 토요일 */
         .fc-day-sat a {
             color: #007bff !important;
         }
+
     </style>
 </head>
+
 <body>
 
-<div id="loading">구글 시트 달력에서 일정을 읽어오는 중...</div>
+<div id="loading">
+    구글 시트 달력에서 일정을 읽어오는 중...
+</div>
+
 <div id="calendar" style="display:none;"></div>
 
 <script>
 
     // ---------------- 설정 ----------------
+
     const SPREADSHEET_CSV_URL =
         'https://docs.google.com/spreadsheets/d/e/2PACX-1vRwyj8tc_nfUA8HM5XRbFJKxuV_QAGgZwYJjF4N553FDdToB8yBDU76vE2xHRFG0glJV3rtZE3GhuVC/pub?gid=1133141414&single=true&output=csv';
 
     const YEAR_MONTH = '2026-05';
+
     // -------------------------------------
 
 
     document.addEventListener('DOMContentLoaded', function () {
+
         fetchGridCSV();
+
     });
 
 
@@ -87,19 +113,25 @@
             const response = await fetch(SPREADSHEET_CSV_URL);
 
             if (!response.ok) {
-                throw new Error('CSV 불러오기 실패');
+
+                throw new Error('CSV 로딩 실패');
+
             }
 
-            // 한글 깨짐 방지
+            // UTF-8 한글 깨짐 방지
             const buffer = await response.arrayBuffer();
+
             const decoder = new TextDecoder('utf-8');
+
             const csvText = decoder.decode(buffer);
 
             console.log("===== CSV 원본 =====");
             console.log(csvText);
 
             Papa.parse(csvText, {
+
                 header: false,
+
                 skipEmptyLines: true,
 
                 complete: function (results) {
@@ -108,6 +140,7 @@
                     console.log(results.data);
 
                     parseCalendarData(results.data);
+
                 },
 
                 error: function (err) {
@@ -116,6 +149,7 @@
 
                     document.getElementById('loading').innerText =
                         'CSV 파싱 실패';
+
                 }
             });
 
@@ -125,6 +159,7 @@
 
             document.getElementById('loading').innerText =
                 '구글 시트 연결 실패';
+
         }
     }
 
@@ -139,18 +174,18 @@
         console.log(rows);
 
         /*
-            현재 구글시트 구조 기준:
+            구조 예시
 
-            날짜 셀 아래줄에 일정이 있는 형태
+            1 2 3
+              일정
 
-            예:
-            7  8  9
-               일정
+            날짜 아래 줄에 일정이 있는 구조
         */
 
         for (let r = 0; r < rows.length - 1; r++) {
 
             const currentRow = rows[r];
+
             const nextRow = rows[r + 1];
 
             if (!currentRow) continue;
@@ -168,14 +203,15 @@
 
                 if (!dayNum) continue;
 
-                // 아래줄 일정
                 let eventTitle = '';
 
+                // 아래줄 일정 읽기
                 if (nextRow && nextRow[c]) {
+
                     eventTitle = nextRow[c].toString().trim();
+
                 }
 
-                // 일정 없으면 skip
                 if (!eventTitle) continue;
 
                 // 이상한 값 제거
@@ -191,10 +227,15 @@
                     `${YEAR_MONTH}-${dayNum.padStart(2, '0')}`;
 
                 events.push({
+
                     title: eventTitle,
+
                     start: dateString,
+
                     allDay: true
+
                 });
+
             }
         }
 
@@ -202,9 +243,11 @@
         console.log(events);
 
         document.getElementById('loading').style.display = 'none';
+
         document.getElementById('calendar').style.display = 'block';
 
         initCalendar(events);
+
     }
 
 
@@ -212,39 +255,58 @@
     // 달력 생성
     function initCalendar(eventsData) {
 
-        const calendarEl = document.getElementById('calendar');
+        const calendarEl =
+            document.getElementById('calendar');
 
-        const calendar = new FullCalendar.Calendar(calendarEl, {
+        const calendar =
+            new FullCalendar.Calendar(calendarEl, {
 
-            initialView: 'dayGridMonth',
+                initialView: 'dayGridMonth',
 
-            initialDate: `${YEAR_MONTH}-01`,
+                initialDate: `${YEAR_MONTH}-01`,
 
-            locale: 'ko',
+                locale: 'ko',
 
-            height: 'parent',
+                height: '100%',
 
-            headerToolbar: {
-                left: 'prev,next today',
-                center: 'title',
-                right: ''
-            },
+                dayMaxEventRows: true,
 
-            events: eventsData,
+                displayEventTime: false,
 
-            eventClick: function(info) {
+                headerToolbar: {
 
-                Swal.fire({
-                    title: '상세 일정',
-                    text: info.event.title,
-                    icon: 'info',
-                    confirmButtonText: '확인',
-                    confirmButtonColor: '#28a745'
-                });
-            }
-        });
+                    left: 'prev,next today',
+
+                    center: 'title',
+
+                    right: ''
+
+                },
+
+                events: eventsData,
+
+                eventClick: function(info) {
+
+                    Swal.fire({
+
+                        title: '상세 일정',
+
+                        text: info.event.title,
+
+                        icon: 'info',
+
+                        confirmButtonText: '확인',
+
+                        confirmButtonColor: '#28a745'
+
+                    });
+
+                }
+
+            });
 
         calendar.render();
+
     }
 
 </script>
