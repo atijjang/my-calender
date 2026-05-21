@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>안태 달력</title>
+    <title>일이 달력</title>
     
     <link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.js"></script>
@@ -27,14 +27,14 @@
     <script>
         // ------------------ [ 마스터 설정 구역 ] ------------------
         // 1. 아까 확인하신 구글 스프레드시트 ID 주소를 여기에 넣어주세요.
-        const SPREADSHEET_ID = '여기에_스프레드시트_ID_넣기'; 
+        const SPREADSHEET_ID = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRwyj8tc_nfUA8HM5XRbFJKxuV_QAGgZwYJjF4N553FDdToB8yBDU76vE2xHRFG0glJV3rtZE3GhuVC/pubhtml?gid=1133141414&single=true'; 
         
         // 2. 현재 달력의 연도와 월을 지정합니다.
         const YEAR_MONTH = '2026-05'; 
         // --------------------------------------------------------
 
         // 주소를 안전하고 정확한 구글 시트 API 쿼리 주소로 자동 변환합니다.
-        const SPREADSHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRwyj8tc_nfUA8HM5XRbFJKxuV_QAGgZwYJjF4N553FDdToB8yBDU76vE2xHRFG0glJV3rtZE3GhuVC/pub?gid=1133141414&single=true&output=csv';
+        const SPREADSHEET_CSV_URL = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/gviz/tq?tqx=out:csv`;
 
         document.addEventListener('DOMContentLoaded', function() {
             if(SPREADSHEET_ID.includes('여기에')) {
