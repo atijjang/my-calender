@@ -26,15 +26,15 @@
 
     <script>
         // ------------------ [ 마스터 설정 구역 ] ------------------
-        // 1. 아까 확인하신 구글 스프레드시트 ID 주소를 여기에 넣어주세요.
+        // 질문자님의 [웹에 게시] ID를 그대로 사용합니다.
         const SPREADSHEET_ID = 'e/2PACX-1vRwyj8tc_nfUA8HM5XRbFJKxuV_QAGgZwYJjF4N553FDdToB8yBDU76vE2xHRFG0glJV3rtZE3GhuVC';
         
-        // 2. 현재 달력의 연도와 월을 지정합니다.
+        // 현재 달력의 연도와 월
         const YEAR_MONTH = '2026-05'; 
         // --------------------------------------------------------
 
-        // 주소를 안전하고 정확한 구글 시트 API 쿼리 주소로 자동 변환합니다.
-        const SPREADSHEET_CSV_URL = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/gviz/tq?tqx=out:csv`;
+        // 💡 [핵심 수정] 웹에 게시용 전용 CSV 다운로드 주소 조합 방식으로 전면 변경했습니다.
+        const SPREADSHEET_CSV_URL = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/pub?gid=1133141414&single=true&output=csv`;
 
         document.addEventListener('DOMContentLoaded', function() {
             if(SPREADSHEET_ID.includes('여기에')) {
@@ -47,33 +47,31 @@
         function fetchGridCSV() {
             Papa.parse(SPREADSHEET_CSV_URL, {
                 download: true,
-                header: false, // 격자 구조를 그대로 행렬로 처리하기 위해 false로 둡니다.
+                header: false,
                 complete: function(results) {
                     const rows = results.data;
                     const events = [];
                     
                     // 1행(요일) 건너뛰고 2행(인덱스 1)부터 시작해서 2칸씩 점프 (날짜행 -> 일정행)
                     for (let r = 1; r < rows.length; r += 2) {
-                        const dateRow = rows[r];       // 예: 2행 (날짜 행)
-                        const eventRow = rows[r + 1];  // 예: 3행 (일정 행)
+                        const dateRow = rows[r];       // 날짜 행
+                        const eventRow = rows[r + 1];  // 일정 행
                         
                         if (!dateRow) continue;
                         
                         // 일(A열=0)부터 토(G열=6)까지 돌면서 검사
                         for (let c = 0; c < 7; c++) {
-                            // 날짜 칸에 적힌 숫자 확인 (예: "1", "2")
                             let dayNum = dateRow[c] ? dateRow[c].toString().trim() : '';
                             
-                            // 구글 시트에서 숫자 뒤에 따옴표나 공백이 붙는 경우를 깔끔하게 정제
+                            // 숫자만 남기기
                             dayNum = dayNum.replace(/[^0-9]/g, ''); 
                             
-                            // 날짜 숫자가 존재하는 칸이고, 바로 아래 일정 칸에 글씨가 있다면!
+                            // 날짜 숫자가 있고 바로 아래 칸에 일정이 있다면
                             if (dayNum && eventRow && eventRow[c]) {
                                 const eventTitle = eventRow[c].toString().trim();
                                 
-                                // 따옴표만 남은 찌꺼기 데이터가 아닐 때만 일정으로 등록
-                                if (eventTitle && eventTitle !== '""' && eventTitle !== '""') {
-                                    // YYYY-MM-DD 포맷 완성 (예: 2026-05-01)
+                                if (eventTitle && eventTitle !== '""') {
+                                    // YYYY-MM-DD 포맷 완성
                                     const dateString = `${YEAR_MONTH}-${dayNum.padStart(2, '0')}`;
                                     
                                     events.push({
@@ -92,7 +90,7 @@
                 },
                 error: function(err) {
                     console.error(err);
-                    document.getElementById('loading').innerText = '시트 데이터를 불러오지 못했습니다. 공유 설정을 확인하세요.';
+                    document.getElementById('loading').innerText = '시트 데이터를 불러오지 못했습니다. 구글 시트에서 [웹에 게시]가 정상적으로 완료되었는지 다시 확인해 주세요.';
                 }
             });
         }
