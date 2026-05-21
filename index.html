@@ -7,7 +7,7 @@
     <meta name="viewport"
           content="width=device-width, initial-scale=1.0" />
 
-    <title>홀로로 달력</title>
+    <title>홀로로 숙제</title>
 
     <!-- FullCalendar -->
     <link
@@ -102,7 +102,10 @@
     const SPREADSHEET_CSV_URL =
         'https://docs.google.com/spreadsheets/d/e/2PACX-1vRwyj8tc_nfUA8HM5XRbFJKxuV_QAGgZwYJjF4N553FDdToB8yBDU76vE2xHRFG0glJV3rtZE3GhuVC/pub?gid=1133141414&single=true&output=csv';
 
-    const YEAR_MONTH = '2026-05';
+    const today = new Date();
+    const YEAR = today.getFullYear();
+    const MONTH = String(today.getMonth() + 1).padStart(2, '0');
+    const YEAR_MONTH = `${YEAR}-${MONTH}`;
 
 
     // ===========================
