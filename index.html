@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>일징 달력</title>
+    <title>일지잉 달력</title>
     
     <link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.js"></script>
@@ -26,12 +26,12 @@
 
     <script>
         // ------------------ [ 마스터 설정 구역 ] ------------------
-         const SPREADSHEET_ID = 'e/2PACX-1vRwyj8tc_nfUA8HM5XRbFJKxuV_QAGgZwYJjF4N553FDdToB8yBDU76vE2xHRFG0glJV3rtZE3GhuVC'; 
-        const GID = '1133141414';
+        // 💡 주소가 절대 꼬이지 않도록 구글 시트 웹 게시용 다이렉트 CSV URL로 통합 변경했습니다.
+        const SPREADSHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRwyj8tc_nfUA8HM5XRbFJKxuV_QAGgZwYJjF4N553FDdToB8yBDU76vE2xHRFG0glJV3rtZE3GhuVC/pub?gid=1133141414&single=true&output=csv';
+        
+        // 현재 달력의 연도와 월 설정
         const YEAR_MONTH = '2026-05'; 
         // --------------------------------------------------------
-
-        const SPREADSHEET_CSV_URL = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/pub?gid=${GID}&single=true&output=csv`;
 
         document.addEventListener('DOMContentLoaded', function() {
             fetchGridCSV();
@@ -42,11 +42,12 @@
                 download: true,
                 header: false,
                 complete: function(results) {
-                    const rows = r = results.data;
+                    const rows = results.data;
                     const events = [];
                     
                     console.log("시트 원본 데이터 로드 성공:", rows);
 
+                    // 1행(요일) 건너뛰고 2행(날짜행)부터 시작해서 2칸씩 점프
                     for (let r = 1; r < rows.length; r += 2) {
                         const dateRow = rows[r];       
                         const eventRow = rows[r + 1];  
@@ -57,6 +58,7 @@
                             let dayNum = dateRow[c] ? dateRow[c].toString().trim() : '';
                             dayNum = dayNum.replace(/[^0-9]/g, ''); 
                             
+                            // 날짜 숫자가 있고 바로 아래 칸에 일정이 있다면 등록
                             if (dayNum && eventRow && eventRow[c]) {
                                 const eventTitle = eventRow[c].toString().trim();
                                 
@@ -73,17 +75,16 @@
                         }
                     }
 
-                    console.log("파싱 완료된 일정 리스트:", events);
+                    console.log("최종 동기화될 일정 리스트:", events);
 
                     document.getElementById('loading').style.display = 'none';
                     document.getElementById('calendar').style.display = 'block';
                     
-                    // 데이터를 넘겨주며 달력 초기화 함수 호출
                     initCalendar(events);
                 },
                 error: function(err) {
                     console.error("데이터 불러오기 실패:", err);
-                    document.getElementById('loading').innerText = '시트 데이터를 불러오지 못했습니다.';
+                    document.getElementById('loading').innerText = '시트 데이터를 불러오지 못했습니다. 공유 설정을 확인하세요.';
                 }
             });
         }
@@ -96,7 +97,7 @@
                 locale: 'ko',
                 height: 'parent',
                 headerToolbar: { left: 'prev,next today', center: 'title', right: '' },
-                events: eventsData, // 정제된 일정을 달력에 주입
+                events: eventsData,
                 eventClick: function(info) {
                     Swal.fire({
                         title: '상세 일정',
@@ -108,10 +109,13 @@
                 }
             });
             
-            // 💡 [핵심 보완] 달력을 화면에 그리자마자 일정을 강제로 밀어 넣고 재렌더링 시킵니다.
             calendar.render();
-            calendar.removeAllEvents();
-            calendar.addEventSource(eventsData);
+            
+            // 데이터가 주입되는 순간 화면을 강제로 한 번 더 새로고침해 줍니다.
+            setTimeout(() => {
+                calendar.removeAllEvents();
+                calendar.addEventSource(eventsData);
+            }, 100);
         }
     </script>
 </body>
