@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>답답이</title>
+    <title>일이 달력</title>
     
     <link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.js"></script>
@@ -26,13 +26,12 @@
 
     <script>
         // ------------------ [ 마스터 설정 구역 ] ------------------
-        const SPREADSHEET_ID = 'e/2PACX-1vRwyj8tc_nfUA8HM5XRbFJKxuV_QAGgZwYJjF4N553FDdToB8yBDU76vE2xHRFG0glJV3rtZE3GhuVC'; 
+        const SPREADSHEET_ID = '1llmkqGNg16KtIdOeOYvl7OODX8ZELMe8X8SQPZJLk3s'; 
         const GID = '1133141414';
         const YEAR_MONTH = '2026-05'; 
         // --------------------------------------------------------
 
-        // 구글 시트의 특정 gid 탭을 완벽하게 가져오는 표준 CSV 주소
-        const SPREADSHEET_CSV_URL = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/pub?gid=${GID}&single=true&output=csv`;
+        const SPREADSHEET_ID = 'e/2PACX-1vRwyj8tc_nfUA8HM5XRbFJKxuV_QAGgZwYJjF4N553FDdToB8yBDU76vE2xHRFG0glJV3rtZE3GhuVC';
 
         document.addEventListener('DOMContentLoaded', function() {
             fetchGridCSV();
@@ -43,30 +42,24 @@
                 download: true,
                 header: false,
                 complete: function(results) {
-                    const rows = results.data;
+                    const rows = r = results.data;
                     const events = [];
                     
-                    console.log("시트 원본 데이터 로드 성공:", rows); // 디버깅용 로그
+                    console.log("시트 원본 데이터 로드 성공:", rows);
 
-                    // 1행(요일) 건너뛰고 2행(인덱스 1)부터 시작해서 2칸씩 점프 (날짜행 -> 일정행)
                     for (let r = 1; r < rows.length; r += 2) {
                         const dateRow = rows[r];       
                         const eventRow = rows[r + 1];  
                         
                         if (!dateRow) continue;
                         
-                        // A열(0)부터 G열(6)까지 검사
                         for (let c = 0; c < 7; c++) {
                             let dayNum = dateRow[c] ? dateRow[c].toString().trim() : '';
-                            
-                            // 문자가 섞여있어도 순수 숫자만 추출 (예: "1" 또는 "1일" -> "1")
                             dayNum = dayNum.replace(/[^0-9]/g, ''); 
                             
-                            // 날짜 숫자가 있고 바로 아래 일정 칸에 글씨가 있다면
                             if (dayNum && eventRow && eventRow[c]) {
                                 const eventTitle = eventRow[c].toString().trim();
                                 
-                                // 빈 문자열 찌꺼기가 아닐 때만 등록
                                 if (eventTitle && eventTitle !== '""' && eventTitle !== 'null') {
                                     const dateString = `${YEAR_MONTH}-${dayNum.padStart(2, '0')}`;
                                     
@@ -80,15 +73,17 @@
                         }
                     }
 
-                    console.log("파싱 완료된 일정 리스트:", events); // 디버깅용 로그
+                    console.log("파싱 완료된 일정 리스트:", events);
 
                     document.getElementById('loading').style.display = 'none';
                     document.getElementById('calendar').style.display = 'block';
+                    
+                    // 데이터를 넘겨주며 달력 초기화 함수 호출
                     initCalendar(events);
                 },
                 error: function(err) {
                     console.error("데이터 불러오기 실패:", err);
-                    document.getElementById('loading').innerText = '시트 데이터를 불러오지 못했습니다. URL주소나 공유설정을 다시 확인하세요.';
+                    document.getElementById('loading').innerText = '시트 데이터를 불러오지 못했습니다.';
                 }
             });
         }
@@ -101,7 +96,7 @@
                 locale: 'ko',
                 height: 'parent',
                 headerToolbar: { left: 'prev,next today', center: 'title', right: '' },
-                events: eventsData,
+                events: eventsData, // 정제된 일정을 달력에 주입
                 eventClick: function(info) {
                     Swal.fire({
                         title: '상세 일정',
@@ -112,7 +107,11 @@
                     });
                 }
             });
+            
+            // 💡 [핵심 보완] 달력을 화면에 그리자마자 일정을 강제로 밀어 넣고 재렌더링 시킵니다.
             calendar.render();
+            calendar.removeAllEvents();
+            calendar.addEventSource(eventsData);
         }
     </script>
 </body>
