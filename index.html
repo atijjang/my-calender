@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>스마트안 달력</title>
+    <title>안태 달력</title>
     
     <link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.js"></script>
@@ -12,27 +12,33 @@
     
     <style>
         html, body { margin: 0; padding: 0; height: 100%; font-family: sans-serif; background-color: #f8f9fa; overflow: hidden; }
-        #loading { text-align: center; font-size: 16px; color: #666; padding-top: 50px; }
+        #loading { text-align: center; font-size: 16px; color: #666; padding-top: 50px; font-weight: bold; }
         #calendar { max-width: 100%; height: 100vh; padding: 10px; box-sizing: border-box; background: #fff; }
-        .fc-event { cursor: pointer; padding: 2px 4px; background-color: #007bff; border: none; border-radius: 4px; }
+        .fc-event { cursor: pointer; padding: 3px 6px; background-color: #28a745; border: none; border-radius: 6px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
         .fc-day-sun a { color: #dc3545 !important; }
         .fc-day-sat a { color: #007bff !important; }
     </style>
 </head>
 <body>
 
-    <div id="loading">구글 시트 달력판에서 일정을 읽어오는 중...</div>
+    <div id="loading">구글 시트 달력에서 일정을 읽어오는 중...</div>
     <div id="calendar" style="display: none;"></div>
 
     <script>
-        // ------------------ [ 설정 구역 ] ------------------
+        // ------------------ [ 마스터 설정 구역 ] ------------------
+        // 1. 아까 확인하신 구글 스프레드시트 ID 주소를 여기에 넣어주세요.
+        const SPREADSHEET_ID = '여기에_스프레드시트_ID_넣기'; 
+        
+        // 2. 현재 달력의 연도와 월을 지정합니다.
+        const YEAR_MONTH = '2026-05'; 
+        // --------------------------------------------------------
+
+        // 주소를 안전하고 정확한 구글 시트 API 쿼리 주소로 자동 변환합니다.
         const SPREADSHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRwyj8tc_nfUA8HM5XRbFJKxuV_QAGgZwYJjF4N553FDdToB8yBDU76vE2xHRFG0glJV3rtZE3GhuVC/pub?gid=1133141414&single=true&output=csv';
-        const YEAR_MONTH = '2026-05'; // 현재 작성 중인 달력의 연도-월
-        // --------------------------------------------------
 
         document.addEventListener('DOMContentLoaded', function() {
-            if(SPREADSHEET_CSV_URL.includes('여기에')) {
-                document.getElementById('loading').innerText = '오류: CSV 주소를 입력해주세요.';
+            if(SPREADSHEET_ID.includes('여기에')) {
+                document.getElementById('loading').innerText = '오류: 구글 스프레드시트 ID를 코드에 입력해주세요!';
                 return;
             }
             fetchGridCSV();
@@ -41,30 +47,34 @@
         function fetchGridCSV() {
             Papa.parse(SPREADSHEET_CSV_URL, {
                 download: true,
-                header: false,
+                header: false, // 격자 구조를 그대로 행렬로 처리하기 위해 false로 둡니다.
                 complete: function(results) {
                     const rows = results.data;
                     const events = [];
                     
-                    // 요일 행(1행 = 인덱스 0) 건너뛰고, 2행(인덱스 1)부터 시작
-                    // r은 2칸씩 점프합니다 (날짜행 -> 일정행)
+                    // 1행(요일) 건너뛰고 2행(인덱스 1)부터 시작해서 2칸씩 점프 (날짜행 -> 일정행)
                     for (let r = 1; r < rows.length; r += 2) {
-                        const dateRow = rows[r];       // 예: 2행 (날짜가 적힌 행)
-                        const eventRow = rows[r + 1];  // 예: 3행 (일정이 적힌 행)
+                        const dateRow = rows[r];       // 예: 2행 (날짜 행)
+                        const eventRow = rows[r + 1];  // 예: 3행 (일정 행)
                         
                         if (!dateRow) continue;
                         
-                        // 일(0)부터 토(6)까지 7개 열 검사
+                        // 일(A열=0)부터 토(G열=6)까지 돌면서 검사
                         for (let c = 0; c < 7; c++) {
-                            const dayNum = dateRow[c] ? dateRow[c].trim() : '';
+                            // 날짜 칸에 적힌 숫자 확인 (예: "1", "2")
+                            let dayNum = dateRow[c] ? dateRow[c].toString().trim() : '';
                             
-                            // 날짜 숫자가 있고, 그 아래 칸에 일정 내용이 있다면
+                            // 구글 시트에서 숫자 뒤에 따옴표나 공백이 붙는 경우를 깔끔하게 정제
+                            dayNum = dayNum.replace(/[^0-9]/g, ''); 
+                            
+                            // 날짜 숫자가 존재하는 칸이고, 바로 아래 일정 칸에 글씨가 있다면!
                             if (dayNum && eventRow && eventRow[c]) {
-                                const eventTitle = eventRow[c].trim();
+                                const eventTitle = eventRow[c].toString().trim();
                                 
-                                if (eventTitle) {
-                                    // 날짜를 YYYY-MM-DD 형태로 변환 (예: 2026-05-01)
-                                    const dateString = `${YEAR_MONTH}-${String(dayNum).padStart(2, '0')}`;
+                                // 따옴표만 남은 찌꺼기 데이터가 아닐 때만 일정으로 등록
+                                if (eventTitle && eventTitle !== '""' && eventTitle !== '""') {
+                                    // YYYY-MM-DD 포맷 완성 (예: 2026-05-01)
+                                    const dateString = `${YEAR_MONTH}-${dayNum.padStart(2, '0')}`;
                                     
                                     events.push({
                                         title: eventTitle,
@@ -79,6 +89,10 @@
                     document.getElementById('loading').style.display = 'none';
                     document.getElementById('calendar').style.display = 'block';
                     initCalendar(events);
+                },
+                error: function(err) {
+                    console.error(err);
+                    document.getElementById('loading').innerText = '시트 데이터를 불러오지 못했습니다. 공유 설정을 확인하세요.';
                 }
             });
         }
@@ -94,9 +108,11 @@
                 events: eventsData,
                 eventClick: function(info) {
                     Swal.fire({
-                        title: '일정 확인',
+                        title: '상세 일정',
                         text: info.event.title,
-                        icon: 'info'
+                        icon: 'info',
+                        confirmButtonText: '확인',
+                        confirmButtonColor: '#28a745'
                     });
                 }
             });
