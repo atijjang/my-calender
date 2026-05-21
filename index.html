@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>일이 달력</title>
+    <title>일징 달력</title>
     
     <link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.js"></script>
@@ -26,12 +26,12 @@
 
     <script>
         // ------------------ [ 마스터 설정 구역 ] ------------------
-        const SPREADSHEET_ID = '1llmkqGNg16KtIdOeOYvl7OODX8ZELMe8X8SQPZJLk3s'; 
+         const SPREADSHEET_ID = 'e/2PACX-1vRwyj8tc_nfUA8HM5XRbFJKxuV_QAGgZwYJjF4N553FDdToB8yBDU76vE2xHRFG0glJV3rtZE3GhuVC'; 
         const GID = '1133141414';
         const YEAR_MONTH = '2026-05'; 
         // --------------------------------------------------------
 
-        const SPREADSHEET_ID = 'e/2PACX-1vRwyj8tc_nfUA8HM5XRbFJKxuV_QAGgZwYJjF4N553FDdToB8yBDU76vE2xHRFG0glJV3rtZE3GhuVC';
+        const SPREADSHEET_CSV_URL = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/pub?gid=${GID}&single=true&output=csv`;
 
         document.addEventListener('DOMContentLoaded', function() {
             fetchGridCSV();
